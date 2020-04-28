@@ -13,7 +13,7 @@ CLASIFICADOR = 'assets/haar/coches.xml'
 cascade = cv2.CascadeClassifier(CLASIFICADOR)
 
 
-def procesamiento_img_haar(imagen, contador):
+def procesamiento_img_haar(imagen):
     # Se convierte la imagen a escala de grises
     gray = cv2.cvtColor(imagen, cv2.COLOR_BGR2GRAY)
 
@@ -25,11 +25,10 @@ def procesamiento_img_haar(imagen, contador):
     if imagen_gris is ():
         print('Error')
     for (x, y, w, h) in imagen_gris:
-        imagen_rect = cv2.rectangle(imagen, (x, y), (x + w, y + h), (0, 255, 0), 2)
-        cv2.imshow('Detector de coches', imagen_rect[y:y+h, x:x+w])
+        imagen_gris = cv2.rectangle(imagen, (x, y), (x + w, y + h), (0, 0, 0), 2)
+        frontal_detectado = imagen_gris[y:y+h, x:x+w]
 
-        cv2.waitKey(1)
-        # time.sleep(1)
+        return frontal_detectado
 
     # cv2.imwrite(os.path.join('img', 'output', 'output_haar'+str(contador)+'.png'), imagen)
 
