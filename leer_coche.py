@@ -11,6 +11,7 @@ from deteccion_orb import *
 from deteccion_haar import *
 
 CLASIFICADOR_MATRICULAS = 'assets/haar/matriculas.xml'
+CARPETA_TRAIN_OCR = 'training_ocr'
 
 cascade_matriculas = cv2.CascadeClassifier(CLASIFICADOR_MATRICULAS)
 
@@ -43,19 +44,12 @@ def get_bounding(ctrs, imagen):
         # Get bounding box
         x, y, w, h = cv2.boundingRect(ctr)
         if (w < imagen.shape[1]*0.3) and (w > imagen.shape[1]*0.02) and (h > imagen.shape[0]*0.45):
-            cv2.rectangle(imagen, (x, y), (x + w, y + h), (0,255,0), 2)
-            char_list.append((x, y, w, h, (x * 4, y * 4), ((x + w) * 0.4, (y + h) * 0.4), ctr))
+            char_list.append((x, y, w, h))
             char_list.sort()
-        
-            cv2.imshow('test', imagen)
-            cv2.waitKey(0)
-
     return char_list
 
 
 def detecta_digitos(matriculas):
-    char_list = []
-
     for i, matricula in enumerate(matriculas):
         matricula_resized = cv2.resize(matricula, (matricula.shape[1]*3, matricula.shape[0]*3))
         matricula_gray = cv2.cvtColor(matricula_resized, cv2.COLOR_BGR2GRAY)
@@ -69,7 +63,25 @@ def detecta_digitos(matriculas):
         thre_mor = cv2.morphologyEx(th2, cv2.MORPH_DILATE, kernel3)
 
         ctrs, hierarchy = cv2.findContours(thre_mor.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        get_bounding(ctrs, matricula_resized)
+        lista = get_bounding(ctrs, matricula_resized)
+
+        for rect in lista:
+            x,y,w,h = rect
+            caracter_pot = matricula_resized[y:y+h, x:x+w]
+
+
+def procesa_ocr_training(caracteres_ocr):
+    for caracter in caracteres_ocr:
+        caracter_gray = cv2.cvtColor(caracter, cv2.COLOR_BGR2GRAY)
+        caracter_blur = cv2.GaussianBlur(caracter_gray, (7, 7), 0)
+        thresh_inv = cv2.adaptiveThreshold(caracter_blur, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 39, 1)
+
+        kernel3 = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+        thre_mor = cv2.morphologyEx(thresh_inv, cv2.MORPH_DILATE, kernel3)
+
+        ctrs, hierarchy = cv2.findContours(thre_mor.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    print('PROCESADO')
 
 
 def main():
@@ -77,6 +89,9 @@ def main():
     test_imgs = carga_imagenes_carpeta(CARPETA_TEST)
     matriculas = detecta_matriculas(test_imgs)
     detecta_digitos(matriculas)
+
+    test_ocr = carga_imagenes_carpeta(CARPETA_TRAIN_OCR)
+    procesa_ocr_training(test_ocr)
 
 
 if __name__ == '__main__':
