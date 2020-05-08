@@ -1,11 +1,5 @@
 # /usr/bin/python3
 
-import cv2
-import sklearn
-import imutils
-import numpy as np
-import matplotlib.pyplot as plt
-from numba.six import print_
 
 from deteccion_orb import *
 from deteccion_haar import *
@@ -72,6 +66,7 @@ def detecta_digitos(matriculas):
 
 def procesa_ocr_training(caracteres_ocr):
     for caracter in caracteres_ocr:
+        caracter = cv2.resize(caracter, dsize=(10,10), interpolation=cv2.INTER_LINEAR)
         caracter_gray = cv2.cvtColor(caracter, cv2.COLOR_BGR2GRAY)
         caracter_blur = cv2.GaussianBlur(caracter_gray, (7, 7), 0)
         thresh_inv = cv2.adaptiveThreshold(caracter_blur, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 39, 1)
