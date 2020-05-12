@@ -1,5 +1,9 @@
 # /usr/bin/python3
 
+import cv2
+import sklearn
+import numpy as np
+import matplotlib.pyplot as plt
 
 from deteccion_orb import *
 from deteccion_haar import *
@@ -40,10 +44,13 @@ def get_bounding(ctrs, imagen):
         if (w < imagen.shape[1]*0.3) and (w > imagen.shape[1]*0.02) and (h > imagen.shape[0]*0.45):
             char_list.append((x, y, w, h))
             char_list.sort()
+
     return char_list
 
 
 def detecta_digitos(matriculas):
+    char_list = []
+
     for i, matricula in enumerate(matriculas):
         matricula_resized = cv2.resize(matricula, (matricula.shape[1]*3, matricula.shape[0]*3))
         matricula_gray = cv2.cvtColor(matricula_resized, cv2.COLOR_BGR2GRAY)
@@ -57,16 +64,20 @@ def detecta_digitos(matriculas):
         thre_mor = cv2.morphologyEx(th2, cv2.MORPH_DILATE, kernel3)
 
         ctrs, hierarchy = cv2.findContours(thre_mor.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
         lista = get_bounding(ctrs, matricula_resized)
 
-        for rect in lista:
-            x,y,w,h = rect
-            caracter_pot = matricula_resized[y:y+h, x:x+w]
+    for rect in lista:
+        x, y, w, h = rect
+        caracter_pot = matricula_resized[y:y + h, x:x + w]
 
 
 def procesa_ocr_training(caracteres_ocr):
+    M = np.zeros((len(caracteres_ocr), 100), dtype=np.int32)
+    num_caracter = 0
+
     for caracter in caracteres_ocr:
-        caracter = cv2.resize(caracter, dsize=(10,10), interpolation=cv2.INTER_LINEAR)
+        caracter = cv2.resize(caracter, (10,10), interpolation=cv2.INTER_LINEAR)
         caracter_gray = cv2.cvtColor(caracter, cv2.COLOR_BGR2GRAY)
         caracter_blur = cv2.GaussianBlur(caracter_gray, (7, 7), 0)
         thresh_inv = cv2.adaptiveThreshold(caracter_blur, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 39, 1)
@@ -76,7 +87,28 @@ def procesa_ocr_training(caracteres_ocr):
 
         ctrs, hierarchy = cv2.findContours(thre_mor.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
+        vc = obtener_caracteristicas(caracter_gray)
+        iterador = 0
+        for pixel in vc[0]:
+            M[num_caracter][iterador] = vc[0][iterador]
+            iterador += 1
+
+        num_caracter += 1
+
     print('PROCESADO')
+
+
+def obtener_caracteristicas(caracter):
+    # Es un vector de una sola fila y 100 columnas que contiene el valor de gris de la imagen
+    vector_caracteristicas = np.zeros((1, caracter.size), dtype=np.int32)
+
+    iterador = 0
+    for fila in caracter:
+        for valor_gris in fila:
+            vector_caracteristicas[0][iterador] = valor_gris
+            iterador += 1
+
+    return vector_caracteristicas
 
 
 def main():
