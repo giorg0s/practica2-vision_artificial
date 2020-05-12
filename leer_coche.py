@@ -58,7 +58,8 @@ def detecta_digitos(matriculas):
         matricula_gray = cv2.bilateralFilter(matricula_gray, 11, 17, 17)
         # matricula_blur = cv2.GaussianBlur(matricula_gray, (7, 7), 0)
 
-        # thresh_inv = cv2.adaptiveThreshold(matricula_blur, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 39, 1)
+        # thresh_inv = cv2.adaptiveThreshold(matricula_blur, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV,
+        # 39, 1)
         th2 = cv2.threshold(matricula_gray, 180, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
 
         kernel3 = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
@@ -103,7 +104,7 @@ def procesa_ocr_training(caracteres_ocr):
 
     print('FIN PROCESAMIENTO')
 
-    return (E, M)
+    return E, M
 
 
 def obtener_caracteristicas(caracter):
@@ -119,13 +120,13 @@ def obtener_caracteristicas(caracter):
     return vector_caracteristicas
 
 
-def entrenamiento_lda(car, et):
+def reducir_dimensionalidad(mat_c, vec_e):
     crf = LDA() # se crea el objeto de entrenador LDA
-    crf.fit(car, et.ravel()) # encontrar la matriz de proyeccion
+    crf.fit(mat_c, vec_e.ravel()) # encontrar la matriz de proyeccion
     
-    cr = crf.transform(car) # matriz de caracteristicas reducidas
+    cr = np.ndarray.astype(crf.transform(mat_c), dtype=np.float32)  # matriz de caracteristicas reducidas
 
-    return (crf, cr)
+    return crf, cr  # se retorna tanto la matriz de proyeccion como la matriz CR
 
 
 def main():
@@ -136,7 +137,7 @@ def main():
 
     test_ocr = carga_imagenes_carpeta(CARPETA_TRAIN_OCR, True)
     vector_etiquetas, mat_caracteristicas = procesa_ocr_training(test_ocr)
-    entrenamiento_lda(mat_caracteristicas, vector_etiquetas)
+    reducir_dimensionalidad(mat_caracteristicas, vector_etiquetas)
 
 
 if __name__ == '__main__':
