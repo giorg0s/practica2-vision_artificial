@@ -1,7 +1,7 @@
 # /usr/bin/python3
 
 import cv2
-import sklearn
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -74,7 +74,7 @@ def detecta_digitos(matriculas):
 
 
 def procesa_ocr_training(caracteres_ocr):
-    M = np.zeros((len(caracteres_ocr), 100), dtype=np.int32) # matriz de caracteristicas
+    M = np.zeros((len(caracteres_ocr), 100), dtype=np.float32) # matriz de caracteristicas
     E = np.zeros((len(caracteres_ocr), 1), dtype=np.uint32)
 
     for i in range(len(caracteres_ocr)):
@@ -101,12 +101,14 @@ def procesa_ocr_training(caracteres_ocr):
 
         num_caracter += 1
 
-    print('PROCESADO')
+    print('FIN PROCESAMIENTO')
+
+    return (E, M)
 
 
 def obtener_caracteristicas(caracter):
     # Es un vector de una sola fila y 100 columnas que contiene el valor de gris de la imagen
-    vector_caracteristicas = np.zeros((1, caracter.size), dtype=np.int32)
+    vector_caracteristicas = np.zeros((1, caracter.size), dtype=np.float32)
 
     iterador = 0
     for fila in caracter:
@@ -117,6 +119,13 @@ def obtener_caracteristicas(caracter):
     return vector_caracteristicas
 
 
+def entrenamiento_lda(car, et):
+    mat_proyeccion = LDA() # se crea el objeto de entrenador LDA
+    mat_proyeccion.fit(car, et.ravel()) # encontrar la matriz de proyeccion
+
+    return mat_proyeccion
+
+
 def main():
     # Carga de imagenes
     test_imgs = carga_imagenes_carpeta(CARPETA_TEST, False)
@@ -124,7 +133,8 @@ def main():
     detecta_digitos(matriculas)
 
     test_ocr = carga_imagenes_carpeta(CARPETA_TRAIN_OCR, True)
-    procesa_ocr_training(test_ocr)
+    vector_etiquetas, mat_caracteristicas = procesa_ocr_training(test_ocr)
+    entrenamiento_lda(mat_caracteristicas, vector_etiquetas)
 
 
 if __name__ == '__main__':
