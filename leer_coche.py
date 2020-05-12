@@ -120,10 +120,12 @@ def obtener_caracteristicas(caracter):
 
 
 def entrenamiento_lda(car, et):
-    mat_proyeccion = LDA() # se crea el objeto de entrenador LDA
-    mat_proyeccion.fit(car, et.ravel()) # encontrar la matriz de proyeccion
+    crf = LDA() # se crea el objeto de entrenador LDA
+    crf.fit(car, et.ravel()) # encontrar la matriz de proyeccion
+    
+    cr = crf.transform(car) # matriz de caracteristicas reducidas
 
-    return mat_proyeccion
+    return (crf, cr)
 
 
 def main():
