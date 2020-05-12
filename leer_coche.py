@@ -17,6 +17,7 @@ cascade_matriculas = cv2.CascadeClassifier(CLASIFICADOR_MATRICULAS)
 def detecta_matriculas(imagenes):
     frontales = []  # array con los frontales detectados
     matriculas = []
+
     for i, img in enumerate(imagenes):
         frontal_coche = procesamiento_img_haar(img)
         # frontal_coche = cv2.cvtColor(frontal_coche, cv2.COLOR_GRAY2BGR)
@@ -73,7 +74,12 @@ def detecta_digitos(matriculas):
 
 
 def procesa_ocr_training(caracteres_ocr):
-    M = np.zeros((len(caracteres_ocr), 100), dtype=np.int32)
+    M = np.zeros((len(caracteres_ocr), 100), dtype=np.int32) # matriz de caracteristicas
+    E = np.zeros((len(caracteres_ocr), 1), dtype=np.uint32)
+
+    for i in range(len(caracteres_ocr)):
+        # https://stackoverflow.com/questions/4528982/convert-alphabet-letters-to-number-in-python
+        E[i][0] = int(ord(str(etiquetas[i][0])))
     num_caracter = 0
 
     for caracter in caracteres_ocr:
@@ -113,11 +119,11 @@ def obtener_caracteristicas(caracter):
 
 def main():
     # Carga de imagenes
-    test_imgs = carga_imagenes_carpeta(CARPETA_TEST)
+    test_imgs = carga_imagenes_carpeta(CARPETA_TEST, False)
     matriculas = detecta_matriculas(test_imgs)
     detecta_digitos(matriculas)
 
-    test_ocr = carga_imagenes_carpeta(CARPETA_TRAIN_OCR)
+    test_ocr = carga_imagenes_carpeta(CARPETA_TRAIN_OCR, True)
     procesa_ocr_training(test_ocr)
 
 

@@ -24,10 +24,12 @@ training_keypoints = []
 # Estructura para almacenar los descriptores (basada en Flann)
 flann = cv2.FlannBasedMatcher(index_params, search_params)
 
+etiquetas = []
 
 # FUENTE: https://stackoverflow.com/questions/30230592/loading-all-images-using-imread-from-a-given-folder/30230738
 
-def carga_imagenes_carpeta(nombre_carpeta):
+
+def carga_imagenes_carpeta(nombre_carpeta, extrae_etiquetas):
     imagenes = []
 
     print("Se va a iniciar la carga de las imagenes de", nombre_carpeta)
@@ -38,6 +40,8 @@ def carga_imagenes_carpeta(nombre_carpeta):
         imagen = cv2.imread(os.path.join(nombre_carpeta, nombre_imagen))
         if imagen is not None:
             imagenes.append(imagen)
+            if extrae_etiquetas:
+                    etiquetas.append(nombre_imagen)
             print("He leido la imagen ", nombre_imagen)
             # time.sleep(.500)
 
