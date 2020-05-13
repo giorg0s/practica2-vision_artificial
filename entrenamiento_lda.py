@@ -1,9 +1,11 @@
 # /usr/bin/python3
+# -*- coding: utf-8 -*-
+
 
 import cv2
 import numpy as np
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from deteccion_orb import etiquetas
+from carga_imagenes import etiquetas
 from preprocesado import procesa_imagen
 
 

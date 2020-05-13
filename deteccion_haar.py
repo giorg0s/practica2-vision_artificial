@@ -2,9 +2,7 @@
 
 import cv2
 import time
-import os
 import numpy as np
-from deteccion_orb import carga_imagenes_carpeta
 
 CARPETA_TEST = 'img/test'
 CLASIFICADOR = 'assets/haar/coches.xml'
@@ -23,7 +21,7 @@ def procesamiento_img_haar(imagen):
     imagen_gris = cascade.detectMultiScale(imagen_eq, scaleFactor=1.05, minNeighbors=5, minSize=(50, 50))
 
     if imagen_gris is ():
-        print('Error')
+        print('ERROR')
     for (x, y, w, h) in imagen_gris:
         imagen_gris = cv2.rectangle(imagen, (x, y), (x + w, y + h), (0, 0, 0), 2)
         frontal_detectado = imagen_gris[y:y+h, x:x+w]
@@ -46,11 +44,3 @@ def detector_coches(imagenes):
 
     print('TIEMPO MEDIO POR IMAGEN', sum(tiempos)/len(imagenes))
 
-
-def main():
-    test_imgs = np.array(carga_imagenes_carpeta(CARPETA_TEST)) # se cargan las imagenes de test
-    detector_coches(test_imgs)
-
-
-if __name__ == '__main__':
-    main()
