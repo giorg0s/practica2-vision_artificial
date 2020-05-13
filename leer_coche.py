@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 
 from deteccion_orb import *
 from deteccion_haar import *
+from preprocesado import *
+from clasificadores import clasificador_knn
 
 CLASIFICADOR_MATRICULAS = 'assets/haar/matriculas.xml'
 CARPETA_TRAIN_OCR = 'training_ocr'
@@ -50,28 +52,21 @@ def get_bounding(ctrs, imagen):
 
 
 def detecta_digitos(matriculas):
-    char_list = []
+    digitos = []
 
     for i, matricula in enumerate(matriculas):
-        matricula_resized = cv2.resize(matricula, (matricula.shape[1]*3, matricula.shape[0]*3))
-        matricula_gray = cv2.cvtColor(matricula_resized, cv2.COLOR_BGR2GRAY)
-        matricula_gray = cv2.bilateralFilter(matricula_gray, 11, 17, 17)
-        # matricula_blur = cv2.GaussianBlur(matricula_gray, (7, 7), 0)
-
-        # thresh_inv = cv2.adaptiveThreshold(matricula_blur, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV,
-        # 39, 1)
-        th2 = cv2.threshold(matricula_gray, 180, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
-
-        kernel3 = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-        thre_mor = cv2.morphologyEx(th2, cv2.MORPH_DILATE, kernel3)
-
+        matricula_resized = cv2.resize(matricula, (matricula.shape[1] * 3, matricula.shape[0] * 3))
+        thre_mor = procesa_imagen(matricula)
         ctrs, hierarchy = cv2.findContours(thre_mor.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
         lista = get_bounding(ctrs, matricula_resized)
 
-    for rect in lista:
-        x, y, w, h = rect
-        caracter_pot = matricula_resized[y:y + h, x:x + w]
+        for rect in lista:
+            x, y, w, h = rect
+            recorte = matricula_resized[y:y + h, x:x + w]
+            digitos.append(recorte)
+
+    return digitos
 
 
 def procesa_ocr_training(caracteres_ocr):
@@ -84,17 +79,13 @@ def procesa_ocr_training(caracteres_ocr):
     num_caracter = 0
 
     for caracter in caracteres_ocr:
-        caracter = cv2.resize(caracter, (10,10), interpolation=cv2.INTER_LINEAR)
-        caracter_gray = cv2.cvtColor(caracter, cv2.COLOR_BGR2GRAY)
-        caracter_blur = cv2.GaussianBlur(caracter_gray, (7, 7), 0)
-        thresh_inv = cv2.adaptiveThreshold(caracter_blur, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 39, 1)
+        caracter_resized = cv2.resize(caracter, (10,10), interpolation=cv2.INTER_LINEAR)
+        thre_mor = procesa_imagen(caracter_resized)
 
-        kernel3 = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-        thre_mor = cv2.morphologyEx(thresh_inv, cv2.MORPH_DILATE, kernel3)
+        # ctrs, hierarchy = cv2.findContours(thre_mor.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-        ctrs, hierarchy = cv2.findContours(thre_mor.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        vc = obtener_caracteristicas(thre_mor)
 
-        vc = obtener_caracteristicas(caracter_gray)
         iterador = 0
         for pixel in vc[0]:
             M[num_caracter][iterador] = vc[0][iterador]
@@ -137,7 +128,8 @@ def main():
 
     test_ocr = carga_imagenes_carpeta(CARPETA_TRAIN_OCR, True)
     vector_etiquetas, mat_caracteristicas = procesa_ocr_training(test_ocr)
-    reducir_dimensionalidad(mat_caracteristicas, vector_etiquetas)
+    crf, cr = reducir_dimensionalidad(mat_caracteristicas, vector_etiquetas)
+    clasificador_knn(cr, vector_etiquetas)
 
 
 if __name__ == '__main__':
