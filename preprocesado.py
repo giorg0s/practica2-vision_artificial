@@ -16,3 +16,16 @@ def procesa_imagen(imagen):
     thre_mor = cv2.morphologyEx(th2, cv2.MORPH_DILATE, kernel3)
 
     return thre_mor
+
+
+def get_bounding(ctrs, imagen):
+    char_list = []
+    sorted_ctrs = sorted(ctrs, key=lambda ctr: cv2.boundingRect(ctr)[0])
+    for i, ctr in enumerate(sorted_ctrs):
+        # Get bounding box
+        x, y, w, h = cv2.boundingRect(ctr)
+        if (w < imagen.shape[1]*0.3) and (w > imagen.shape[1]*0.02) and (h > imagen.shape[0]*0.45):
+            char_list.append((x, y, w, h))
+            char_list.sort()
+
+    return char_list
