@@ -16,12 +16,12 @@ def carga_imagenes_carpeta(nombre_carpeta, extrae_etiquetas):
     # time.sleep(2)
 
     for img in glob.glob(nombre_carpeta + '/' + '*.jpg'):
-        imagen = cv2.imread(img)
+        imagen = cv2.imread(img, 0)
         imagenes.append(imagen)
         if extrae_etiquetas:
             etiquetas.append(os.path.basename(img)[0])
-        print("He leido la imagen ", img)
-        time.sleep(.100)
+        # print("He leido la imagen ", img)
+        # time.sleep(.100)
 
     print("###################################################")
     print("FIN")

@@ -1,82 +1,76 @@
 # /usr/bin/python3
 # -*- coding: utf-8 -*-
 
-from carga_imagenes import carga_imagenes_carpeta
 from deteccion_haar import procesamiento_img_haar
 from preprocesado import *
-from entrenamiento_lda import *
-from clasificadores import clasificador_knn
-from clasificadores import clasificador_bayes
+from clasificadores import *
 
+CLASIFICADOR_FRONTALES = 'assets/haar/coches.xml'
 CLASIFICADOR_MATRICULAS = 'assets/haar/matriculas.xml'
 CARPETA_TEST_OCR = 'testing_ocr'
+CARPETA_TEST_FULL_SYSTEM = 'testing_full_system'
 
+cascade_frontales = cv2.CascadeClassifier(CLASIFICADOR_FRONTALES)
 cascade_matriculas = cv2.CascadeClassifier(CLASIFICADOR_MATRICULAS)
+digitos = []
 
 
-def detecta_matriculas(imagenes):
-    frontales = []  # array con los frontales detectados
-    matriculas = []
+def detecta_digitos(test_img):
+    lista_matriculas = []
+    lista = []
+    img_trabajo = test_img.copy()
 
-    for i, img in enumerate(imagenes):
-        frontal_coche = procesamiento_img_haar(img)
+    img_color = cv2.cvtColor(img_trabajo, cv2.COLOR_GRAY2BGR)
 
-        cv2.imshow('FRONTAL', frontal_coche)
-        cv2.waitKey(0)
-        # frontal_coche = cv2.cvtColor(frontal_coche, cv2.COLOR_GRAY2BGR)
-        frontales.append(frontal_coche)
+    frontales = cascade_frontales.detectMultiScale(img_trabajo, scaleFactor=1.05, minNeighbors=5, minSize=(50, 50))
 
-    for n, frontal in enumerate(frontales):
-        img_procesada = cascade_matriculas.detectMultiScale(frontal, scaleFactor=1.02, minNeighbors=7, minSize=(10, 10))
+    for (x, y, w, h) in frontales:
+        cv2.rectangle(img_color, (x, y), (x + w, y + h), (0, 0, 255), 2)
+        frontal_coche = img_trabajo[y:y + h, x:x + w]
 
-        if img_procesada is ():
-            print('ERROR')
-        for (x, y, w, h) in img_procesada:
-            imagen_rect = cv2.rectangle(frontal, (x, y), (x + w, y + h), (0, 0, 0), 2)
-            matricula = imagen_rect[y:y + h, x:x + w]
-            matriculas.append(matricula)
+    matriculas = cascade_matriculas.detectMultiScale(img_trabajo, scaleFactor=1.2, minNeighbors=4, minSize=(10, 10),
+                                                     flags=cv2.CASCADE_SCALE_IMAGE)
+    for (x, y, w, h) in matriculas:
+        cv2.rectangle(img_color, (x, y), (x+w, y+h), (255, 0, 255), 1)
+        matricula = img_trabajo[y:y + h, x:x + w]  # Trozo que corresponde con la matrícula recortada
+        lista_matriculas.append(matricula)
 
-        # cv2.imshow('MATRICULA', matricula)
+    for matricula in lista_matriculas:
+        matricula_resized = matricula.copy()
+        matricula_resized = cv2.resize(matricula_resized, (matricula.shape[1] * 5, matricula.shape[0] * 5), cv2.INTER_LINEAR)
+
+        # cv2.imshow('MATRICULA', matricula_resized)
         # cv2.waitKey(0)
-
-    return matriculas
-
-
-def detecta_digitos(matriculas):
-    digitos = []
-
-    for i, matricula in enumerate(matriculas):
-        matricula_resized = cv2.resize(matricula, (matricula.shape[1] * 3, matricula.shape[0] * 3))
-        thre_mor = procesa_imagen(matricula)
+        thre_mor = procesa_imagen(matricula_resized)
         ctrs, hierarchy = cv2.findContours(thre_mor.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        
-        cv2.imshow('RESIZED', matricula)
-        cv2.imshow(0)
 
         lista = get_bounding(ctrs, matricula_resized)
 
-        for rect in lista:
-            x, y, w, h = rect
-            recorte = matricula_resized[y:y + h, x:x + w]
-            digitos.append(recorte)
-            
-            # cv2.imshow('DIGITO', recorte)
-            # cv2.waitKey(0)
+        for caracter in lista:
+            x, y, w, h = caracter
 
-    return digitos
+            recorte = matricula_resized[y:y+h, x:x+w]
+
+            cv2.rectangle(img_color, (x, y), (x+w, y + h), (0, 255, 0), 2)
+
+            digito_resized = cv2.resize(recorte, (10, 10), cv2.INTER_LINEAR)
+            digitos.append(digito_resized)
+
+    cv2.imshow('PRUEBA', img_color)
+    cv2.waitKey(0)
+
+    return lista
 
 
 def main():
     # Carga de imagenes
     test_imgs = carga_imagenes_carpeta(CARPETA_TEST_OCR, False)
-    matriculas = detecta_matriculas(test_imgs)
-    digitos = detecta_digitos(matriculas)
 
-    for i, digito in enumerate(digitos):
-        print('Estoy usando el digito', i)
-        clasificador_knn(digito)
+    for test_img in test_imgs:
+        digitos_leidos = detecta_digitos(test_img)
+        print(len(digitos_leidos))
 
-    # clasificador_bayes(cr, np.ndarray.astype(vector_etiquetas, dtype=np.float32))
+    clasificador_knn = preparar_clasificador_knn()
 
 
 if __name__ == '__main__':
