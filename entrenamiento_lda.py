@@ -11,7 +11,7 @@ from preprocesado import procesa_imagen
 
 def obtener_caracteristicas(caracter):
     # Es un vector de una sola fila y 100 columnas que contiene el valor de gris de la imagen
-    vector_caracteristicas = np.zeros((1, caracter.size), dtype=np.float32)
+    vector_caracteristicas = np.zeros((1, 100), dtype=np.float32)
     iterador = 0
     for fila in caracter:
         for valor_gris in fila:

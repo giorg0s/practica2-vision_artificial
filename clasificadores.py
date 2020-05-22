@@ -14,7 +14,7 @@ knn_clasif = cv2.ml.KNearest_create()  # se crea el clasificador
 def preparar_clasificador_knn():
     train_ocr = carga_imagenes_carpeta(CARPETA_TRAIN_OCR, True)
     vector_etiquetas, mat_caracteristicas = procesa_ocr_training(train_ocr)
-    crf, cr = reducir_dimensionalidad(mat_caracteristicas, vector_etiquetas)
+    cr = reducir_dimensionalidad(mat_caracteristicas, vector_etiquetas)
 
     knn_clasif.train(cr, cv2.ml.ROW_SAMPLE, vector_etiquetas.astype(np.float32))  # se entrena el clasificador
 

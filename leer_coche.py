@@ -19,6 +19,8 @@ def detecta_digitos(test_img):
     lista_matriculas = []
     lista = []
     img_trabajo = test_img.copy()
+    x_mat = 0
+    y_mat = 0
 
     img_color = cv2.cvtColor(img_trabajo, cv2.COLOR_GRAY2BGR)
 
@@ -31,8 +33,10 @@ def detecta_digitos(test_img):
     matriculas = cascade_matriculas.detectMultiScale(img_trabajo, scaleFactor=1.2, minNeighbors=4, minSize=(10, 10),
                                                      flags=cv2.CASCADE_SCALE_IMAGE)
     for (x, y, w, h) in matriculas:
-        cv2.rectangle(img_color, (x, y), (x+w, y+h), (255, 0, 255), 1)
-        matricula = img_trabajo[y:y + h, x:x + w]  # Trozo que corresponde con la matrícula recortada
+        x_mat = x
+        y_mat = y
+        cv2.rectangle(img_color, (x_mat, y_mat), (x_mat+w, y_mat+h), (255, 0, 255), 1)
+        matricula = img_trabajo[y:y_mat + h, x:x_mat + w]  # Trozo que corresponde con la matrícula recortada
         lista_matriculas.append(matricula)
 
     for matricula in lista_matriculas:
@@ -49,28 +53,47 @@ def detecta_digitos(test_img):
         for caracter in lista:
             x, y, w, h = caracter
 
-            recorte = matricula_resized[y:y+h, x:x+w]
+            recorte = matricula[y:y+h, x:x+w]
 
-            cv2.rectangle(img_color, (x, y), (x+w, y + h), (0, 255, 0), 2)
+            cv2.rectangle(img_color, (x_mat+x, y_mat+y), (x_mat + x + w, y_mat + y + h), (0, 255, 0), 1)
 
             digito_resized = cv2.resize(recorte, (10, 10), cv2.INTER_LINEAR)
             digitos.append(digito_resized)
 
-    cv2.imshow('PRUEBA', img_color)
-    cv2.waitKey(0)
+    # cv2.imshow('PRUEBA', img_color)
+    # cv2.waitKey(0)
 
     return lista
 
 
 def main():
+    digitos_leidos = []
+
+
     # Carga de imagenes
     test_imgs = carga_imagenes_carpeta(CARPETA_TEST_OCR, False)
+    clasificador_knn = preparar_clasificador_knn()
 
     for test_img in test_imgs:
-        digitos_leidos = detecta_digitos(test_img)
-        print(len(digitos_leidos))
+        digitos_leidos.append(detecta_digitos(test_img))
 
-    clasificador_knn = preparar_clasificador_knn()
+    M = np.zeros((len(digitos_leidos), 100), dtype=np.uint32)  # matriz de caracteristicas
+    num_caracter = 0
+
+    for digito in digitos_leidos:
+        vc = obtener_caracteristicas(digito)
+
+        iterador = 0
+        for pixel in vc[0]:
+            M[num_caracter][iterador] = vc[0][iterador]
+            iterador += 1
+
+        num_caracter += 1
+
+    lda = LinearDiscriminantAnalysis()
+    cr = lda.transform(M)
+    
+    retval, results = clasificador_knn.predict(np.float32(cr))
 
 
 if __name__ == '__main__':
