@@ -9,11 +9,13 @@ import matplotlib.pyplot as plt
 CARPETA_TRAIN_OCR = 'training_ocr'
 
 knn_clasif = cv2.ml.KNearest_create()  # se crea el clasificador
+bayes_clasif = cv2.ml.NormalBayesClassifier_create()
 
 
 def preparar_clasificador_knn():
     train_ocr = carga_imagenes_carpeta(CARPETA_TRAIN_OCR, True)
     vector_etiquetas, mat_caracteristicas = procesa_ocr_training(train_ocr)
+
     cr = reducir_dimensionalidad(mat_caracteristicas, vector_etiquetas)
 
     knn_clasif.train(cr, cv2.ml.ROW_SAMPLE, vector_etiquetas.astype(np.float32))  # se entrena el clasificador
@@ -21,7 +23,7 @@ def preparar_clasificador_knn():
     return knn_clasif  # se retorna el clasificador entrenado
 
 
-def aplicar_clasfificador_knn(imagen_test, clasificador_knn):
+def aplicar_clasificador_knn(imagen_test, clasificador_knn):
     ret, results, neighbours, dist = clasificador_knn.findNearest(imagen_test, k=5)  # recibe los datos de test (testing_ocr)
 
     print("result:  {}\n".format(results))
@@ -31,8 +33,11 @@ def aplicar_clasfificador_knn(imagen_test, clasificador_knn):
     plt.show()
 
 
-def clasificador_bayes(mat_cr, vec_e):
-    bayes_clasif = cv2.NormalBayesClassifier()  # se crea el clasificador bayesiano
-    # bayes_clasif.train(mat_cr, vec_e)
+def clasificador_bayes():
+    train_ocr = carga_imagenes_carpeta(CARPETA_TRAIN_OCR, True)
+    vector_etiquetas, mat_caracteristicas = procesa_ocr_training(train_ocr)
+    cr = reducir_dimensionalidad(mat_caracteristicas, vector_etiquetas)
 
-    print('LISTO')
+    bayes_clasif.train(cr, vector_etiquetas.astype(np.float32))
+
+    return bayes_clasif

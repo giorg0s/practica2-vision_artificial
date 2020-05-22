@@ -55,6 +55,7 @@ def detecta_digitos(test_img):
 
             recorte = matricula[y:y+h, x:x+w]
 
+
             cv2.rectangle(img_color, (x_mat+x, y_mat+y), (x_mat + x + w, y_mat + y + h), (0, 255, 0), 1)
 
             digito_resized = cv2.resize(recorte, (10, 10), cv2.INTER_LINEAR)
@@ -68,33 +69,16 @@ def detecta_digitos(test_img):
 
 def main():
     digitos_leidos = []
-
-
     # Carga de imagenes
     test_imgs = carga_imagenes_carpeta(CARPETA_TEST_OCR, False)
-    clasificador_knn = preparar_clasificador_knn()
-
     for test_img in test_imgs:
-        digitos_leidos.append(detecta_digitos(test_img))
+        detecta_digitos(test_img)
 
-    M = np.zeros((len(digitos_leidos), 100), dtype=np.uint32)  # matriz de caracteristicas
-    num_caracter = 0
-
-    for digito in digitos_leidos:
-        vc = obtener_caracteristicas(digito)
-
-        iterador = 0
-        for pixel in vc[0]:
-            M[num_caracter][iterador] = vc[0][iterador]
-            iterador += 1
-
-        num_caracter += 1
-
-    lda = LinearDiscriminantAnalysis()
-    cr = lda.transform(M)
-    
-    retval, results = clasificador_knn.predict(np.float32(cr))
-
+    mat_caracteristicas = np.zeros((len(digitos_leidos), 100), dtype=np.uint32)  # matriz de caracteristicas
+    for num_digito, digito in enumerate(digitos_leidos):
+        vc = digito.flatten()
+        mat_caracteristicas[num_digito, :] = vc
+        
 
 if __name__ == '__main__':
     main()
