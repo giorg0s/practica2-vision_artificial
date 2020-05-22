@@ -58,26 +58,27 @@ def procesa_ocr_training(caracteres_ocr, etiquetas):
 
 #     return cr  # se retorna tanto la matriz de proyeccion como la matriz CR
 
-
-if __name__ == '__main__':
+def clasificador(caracteristicas_test):
     # leer carpeta de imagenes -> imagenes, etiquetas
-    imagenes, etiquetas = carga_imagenes_carpeta(RUTA_TRAIN, extrae_etiquetas=True)
+    imagenes_train, etiquetas_train = carga_imagenes_carpeta(RUTA_TRAIN, extrae_etiquetas=True)
 
-    random_ix = np.random.choice(len(imagenes), len(imagenes))
-    imagenes_train, etiquetas_train = imagenes[random_ix[:-TAMAÑO_TEST]], etiquetas[random_ix[:-TAMAÑO_TEST]]
-    imagenes_test, etiquetas_test = imagenes[random_ix[TAMAÑO_TEST:]], etiquetas[random_ix[TAMAÑO_TEST:]]
+    # random_ix = np.random.choice(len(imagenes), len(imagenes))
+    # imagenes_train, etiquetas_train = imagenes[random_ix[:-TAMAÑO_TEST]], etiquetas[random_ix[:-TAMAÑO_TEST]]
+    # imagenes_test, etiquetas_test = imagenes[random_ix[TAMAÑO_TEST:]], etiquetas[random_ix[TAMAÑO_TEST:]]
+
     # obtener caracteristicas
     caracteristicas_train, clases_train = procesa_ocr_training(imagenes_train, etiquetas_train)
-    caracteristicas_test, clases_test = procesa_ocr_training(imagenes_test, etiquetas_test)
+    # caracteristicas_test, clases_test = procesa_ocr_training(imagenes_test, etiquetas_test)
     # entrenar un lda -> Lda
     crf = LinearDiscriminantAnalysis()  # se crea el objeto de entrenador LDA
-    cr7_train = crf.fit_transform(caracteristicas_train, clases_train).astype(np.float32)  # encontrar la matriz de proyeccion
+    cr7_train = crf.fit_transform(caracteristicas_train, clases_train).astype(np.float32)  
     cr7_test = crf.transform(caracteristicas_test)
     # predicciones_test = crf.predict(caracteristicas_test)
 
     knn_clasif = KNeighborsClassifier(n_neighbors=1)  # se crea el clasificador
     knn_clasif.fit(cr7_train, clases_train)
     predicciones_test = knn_clasif.predict(cr7_test)
-    print('cum cock')
-    print(np.mean(clases_test == predicciones_test))
+
+    print('mudito')
+    # print(np.mean(clases_test == predicciones_test))
 

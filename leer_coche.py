@@ -1,13 +1,21 @@
 # /usr/bin/python3
 # -*- coding: utf-8 -*-
 
-from deteccion_haar import procesamiento_img_haar
-from preprocesado import *
-from clasificadores import *
+import cv2
+import clasificadores
+from carga_imagenes import carga_imagenes_carpeta, CLASES
+import numpy as np
+from entrenamiento_lda import procesa_ocr_training
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.neighbors import KNeighborsClassifier
+from preprocesado import procesa_imagen
+from preprocesado import get_bounding
+from random import shuffle
 
 CLASIFICADOR_FRONTALES = 'assets/haar/coches.xml'
 CLASIFICADOR_MATRICULAS = 'assets/haar/matriculas.xml'
 CARPETA_TEST_OCR = 'testing_ocr'
+CARPETA_TRAINING_OCR = 'training_ocr'
 CARPETA_TEST_FULL_SYSTEM = 'testing_full_system'
 
 cascade_frontales = cv2.CascadeClassifier(CLASIFICADOR_FRONTALES)
@@ -54,8 +62,6 @@ def detecta_digitos(test_img):
             x, y, w, h = caracter
 
             recorte = matricula[y:y+h, x:x+w]
-
-
             cv2.rectangle(img_color, (x_mat+x, y_mat+y), (x_mat + x + w, y_mat + y + h), (0, 255, 0), 1)
 
             digito_resized = cv2.resize(recorte, (10, 10), cv2.INTER_LINEAR)
@@ -64,20 +70,36 @@ def detecta_digitos(test_img):
     # cv2.imshow('PRUEBA', img_color)
     # cv2.waitKey(0)
 
-    return lista
+    return digitos
 
 
 def main():
-    digitos_leidos = []
+
+    # leer carpeta de imagenes -> imagenes, etiquetas
+    imagenes_train, etiquetas_train = carga_imagenes_carpeta(CARPETA_TRAINING_OCR, extrae_etiquetas=True)
+    caracteristicas_train, clases_train = procesa_ocr_training(imagenes_train, etiquetas_train)
+    crf = LinearDiscriminantAnalysis()  # se crea el objeto de entrenador LDA
+    cr7_train = crf.fit_transform(caracteristicas_train, clases_train).astype(np.float32)  
+    # cr7_test = crf.transform(caracteristicas_test)
+    knn_clasif = KNeighborsClassifier(n_neighbors=1)  # se crea el clasificador
+    knn_clasif.fit(cr7_train, clases_train)
+
     # Carga de imagenes
     test_imgs = carga_imagenes_carpeta(CARPETA_TEST_OCR, False)
-    for test_img in test_imgs:
-        detecta_digitos(test_img)
+    for num_img, test_img in enumerate(test_imgs):
+        print('PARA LA MATRICULA',num_img)
+        digitos_leidos = detecta_digitos(test_img)
+        mat_caracteristicas = np.zeros((len(digitos_leidos), 100), dtype=np.uint32)  # matriz de caracteristicas
+        for num_digito, digito in enumerate(digitos_leidos):
+            cv2.imshow('ENTRA', digito)
+            cv2.waitKey(0)
+            vc = digito.flatten()
+            mat_caracteristicas[num_digito, :] = vc
 
-    mat_caracteristicas = np.zeros((len(digitos_leidos), 100), dtype=np.uint32)  # matriz de caracteristicas
-    for num_digito, digito in enumerate(digitos_leidos):
-        vc = digito.flatten()
-        mat_caracteristicas[num_digito, :] = vc
+        cr_test = crf.transform(mat_caracteristicas)
+        digitos_matricula = knn_clasif.predict(cr_test)
+        
+        print(list(map(lambda x: CLASES[x], digitos_matricula)))
         
 
 if __name__ == '__main__':
