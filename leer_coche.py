@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import cv2
-import clasificadores
 from carga_imagenes import carga_imagenes_carpeta, CLASES
 import numpy as np
 from entrenamiento_lda import procesa_ocr_training
@@ -10,7 +9,7 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.neighbors import KNeighborsClassifier
 from preprocesado import procesa_imagen
 from preprocesado import get_bounding
-from random import shuffle
+
 
 CLASIFICADOR_FRONTALES = 'assets/haar/coches.xml'
 CLASIFICADOR_MATRICULAS = 'assets/haar/matriculas.xml'
@@ -74,6 +73,8 @@ def detecta_digitos(test_img):
 
 
 def main():
+    # Carga de imagenes
+    test_imgs = carga_imagenes_carpeta(CARPETA_TEST_FULL_SYSTEM, False)
 
     # leer carpeta de imagenes -> imagenes, etiquetas
     imagenes_train, etiquetas_train = carga_imagenes_carpeta(CARPETA_TRAINING_OCR, extrae_etiquetas=True)
@@ -84,13 +85,13 @@ def main():
     knn_clasif = KNeighborsClassifier(n_neighbors=1)  # se crea el clasificador
     knn_clasif.fit(cr7_train, clases_train)
 
-    # Carga de imagenes
-    test_imgs = carga_imagenes_carpeta(CARPETA_TEST_OCR, False)
     for num_img, test_img in enumerate(test_imgs):
-        print('PARA LA MATRICULA',num_img)
+        print('PARA LA MATRICULA', num_img)
         digitos_leidos = detecta_digitos(test_img)
         mat_caracteristicas = np.zeros((len(digitos_leidos), 100), dtype=np.uint32)  # matriz de caracteristicas
+
         for num_digito, digito in enumerate(digitos_leidos):
+            print('Digito', num_digito)
             cv2.imshow('ENTRA', digito)
             cv2.waitKey(0)
             vc = digito.flatten()
@@ -98,7 +99,9 @@ def main():
 
         cr_test = crf.transform(mat_caracteristicas)
         digitos_matricula = knn_clasif.predict(cr_test)
-        
+
+        digitos_leidos.clear()
+
         print(list(map(lambda x: CLASES[x], digitos_matricula)))
         
 
