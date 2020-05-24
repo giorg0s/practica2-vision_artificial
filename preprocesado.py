@@ -4,8 +4,17 @@ from builtins import print
 
 import cv2
 import numpy as np
-from skimage.filters import threshold_local
-import imutils
+
+
+def detecta_centro(frontales):
+    if(len(frontales)) > 0:
+        x, y, w, h = frontales[0]
+        centro_x = int((x + w)/2)
+        centro_y = int((y + h)/2)
+
+        return centro_x, centro_y
+    else:
+        print('NO SE HA ENCONTRADO EL CENTRO')
 
 
 def extraer_valores(imagen):
@@ -39,18 +48,13 @@ def get_bounding(ctrs, hierarchy,  imagen):
         # Get bounding box
         x, y, w, h = cv2.boundingRect(ctr)
         ratio_contorno = h/float(w)
-
-        print(ratio_contorno)
-
         if ratio_contorno > 1 and h > 10 and w >= 6:
             char_list.append((x, y, w, h))
             char_list.sort()
-
         # if (w < imagen.shape[1] * 0.17) and (w > imagen.shape[1] * 0.02) and (h < imagen.shape[0] * 0.95) and (
         #         h > imagen.shape[0] * 0.4):
         #     char_list.append((x, y, w, h))
         #     char_list.sort()
-
     for rect in char_list:
         x, y, w, h = rect
         digitos.append((x, y, w, h))
