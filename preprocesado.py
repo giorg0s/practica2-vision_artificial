@@ -3,16 +3,24 @@
 from builtins import print
 
 import cv2
+import numpy as np
+from skimage.filters import threshold_local
+import imutils
+
+
+def extraer_valores(imagen):
+    imagen = cv2.cvtColor(imagen, cv2.COLOR_GRAY2BGR)
+    V = cv2.split(cv2.cvtColor(imagen, cv2.COLOR_BGR2HSV))[2]
+    T = cv2.adaptiveThreshold(V, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 75, 10)
+    thresh = (V > T).astype("uint8") * 255
+    thresh = cv2.bitwise_not(thresh)
+
+    return thresh
 
 
 def procesa_imagen(imagen):
-    # imagen_gray = cv2.cvtColor(imagen, cv2.COLOR_BGR2GRAY)
     imagen_gray = cv2.bilateralFilter(imagen, 11, 17, 17)
-    # matricula_blur = cv2.GaussianBlur(matricula_gray, (7, 7), 0)
-
-    # thresh_inv = cv2.adaptiveThreshold(matricula_blur, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV,
-    # 39, 1)
-    th2 = cv2.threshold(imagen_gray, 180, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
+    th2 = cv2.adaptiveThreshold(imagen_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 75, 10)
 
     kernel3 = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
     thre_mor = cv2.morphologyEx(th2, cv2.MORPH_DILATE, kernel3)
@@ -20,25 +28,55 @@ def procesa_imagen(imagen):
     return thre_mor
 
 
-def get_bounding(ctrs, imagen):
+def get_bounding(ctrs, hierarchy,  imagen):
     char_list = []
     digitos = []
     sorted_ctrs = sorted(ctrs, key=lambda ctr: cv2.boundingRect(ctr)[0])
 
+    ratio = imagen.shape[1]/imagen.shape[0]
+
     for i, ctr in enumerate(sorted_ctrs):
         # Get bounding box
         x, y, w, h = cv2.boundingRect(ctr)
-        if (w < imagen.shape[1]*0.12) and (w > imagen.shape[1]*0.02) and (h < imagen.shape[0]*0.6) and (h > imagen.shape[0]*0.45):
-            # cv2.rectangle(imagen, (x, y), (x + w, y + h), (0, 0, 0), 2)
-            x_resized = int(x/5)
-            y_resized = int(y/5)
-            w_resized = int(w/5)
-            h_resized = int(h/5)
-            char_list.append((x_resized, y_resized, w_resized, h_resized))
+        ratio_contorno = h/float(w)
+
+        print(ratio_contorno)
+
+        if ratio_contorno > 1 and h > 10 and w >= 6:
+            char_list.append((x, y, w, h))
             char_list.sort()
+
+        # if (w < imagen.shape[1] * 0.17) and (w > imagen.shape[1] * 0.02) and (h < imagen.shape[0] * 0.95) and (
+        #         h > imagen.shape[0] * 0.4):
+        #     char_list.append((x, y, w, h))
+        #     char_list.sort()
 
     for rect in char_list:
         x, y, w, h = rect
         digitos.append((x, y, w, h))
 
     return digitos
+
+
+# BASADO EN:
+# https://www.pyimagesearch.com/2017/02/20/text-skew-correction-opencv-python/
+def rotar_matricula(matricula):
+    matricula_gray = cv2.bitwise_not(matricula)
+    thresh = cv2.threshold(matricula_gray, 0, 255,
+                           cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+
+    coords = np.column_stack(np.where(thresh > 0))
+    angle = cv2.minAreaRect(coords)[-1]
+
+    if angle < -45:
+        angle = -(90 + angle)
+    else:
+        angle = -angle
+
+    (h, w) = matricula.shape[:2]
+    center = (w // 2, h // 2)
+    M = cv2.getRotationMatrix2D(center, angle, 1.0)
+    rotated = cv2.warpAffine(matricula, M, (w, h),
+                             flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+
+    return rotated

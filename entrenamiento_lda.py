@@ -7,12 +7,11 @@ import numpy as np
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.neighbors import KNeighborsClassifier
 from carga_imagenes import carga_imagenes_carpeta
-from preprocesado import procesa_imagen
-from random import shuffle
-
+from preprocesado import procesa_imagen, extraer_valores
 
 RUTA_TRAIN = 'training_ocr'
 TAMAÑO_TEST = 200
+
 
 # def obtener_caracteristicas(caracter):
 #     # Es un vector de una sola fila y 100 columnas que contiene el valor de gris de la imagen
@@ -36,14 +35,27 @@ def procesa_ocr_training(caracteres_ocr, etiquetas):
         vec_etiquetas[ix] = etiquetas[ix]
 
     for num_caracter, caracter in enumerate(caracteres_ocr):
-        caracter_resized = cv2.resize(caracter, (10, 10), interpolation=cv2.INTER_LINEAR)
-        thre_mor = procesa_imagen(caracter_resized)
+        caracter_gray = cv2.bitwise_not(caracter)
+        thresh = cv2.threshold(caracter_gray, 0, 255,
+                               cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+        # caracter_preprocesado = procesa_imagen(caracter)
+        # caracter_preprocesado = extraer_valores(caracter)
 
-        # ctrs, hierarchy = cv2.findContours(thre_mor.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        ctrs, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        sorted_ctrs = sorted(ctrs, key=lambda x: cv2.contourArea(x))
 
-        vc = thre_mor.flatten()
+        if len(sorted_ctrs) != 0:
+            x, y, w, h = cv2.boundingRect(sorted_ctrs[0])
+            caracter_resized = cv2.resize(caracter[y:y + h+2, x:x + w +2], (10, 10), interpolation=cv2.INTER_LINEAR)
 
-        mat_caracteristicas[num_caracter, :] = vc
+            vc = caracter_resized.flatten()
+
+            mat_caracteristicas[num_caracter, :] = vc
+        else:
+            caracter_resized = cv2.resize(caracter, (10, 10), interpolation=cv2.INTER_LINEAR)
+            vc = caracter_resized.flatten()
+
+            mat_caracteristicas[num_caracter, :] = vc
 
     print('FIN pero sin fliparse demasiado tampoco')
 
@@ -71,7 +83,7 @@ def clasificador(caracteristicas_test):
     # caracteristicas_test, clases_test = procesa_ocr_training(imagenes_test, etiquetas_test)
     # entrenar un lda -> Lda
     crf = LinearDiscriminantAnalysis()  # se crea el objeto de entrenador LDA
-    cr7_train = crf.fit_transform(caracteristicas_train, clases_train).astype(np.float32)  
+    cr7_train = crf.fit_transform(caracteristicas_train, clases_train).astype(np.float32)
     cr7_test = crf.transform(caracteristicas_test)
     # predicciones_test = crf.predict(caracteristicas_test)
 
@@ -79,6 +91,4 @@ def clasificador(caracteristicas_test):
     knn_clasif.fit(cr7_train, clases_train)
     predicciones_test = knn_clasif.predict(cr7_test)
 
-    print('mudito')
     # print(np.mean(clases_test == predicciones_test))
-
