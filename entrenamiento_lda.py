@@ -4,28 +4,14 @@
 
 import cv2
 import numpy as np
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.neighbors import KNeighborsClassifier
-from carga_imagenes import carga_imagenes_carpeta
-from preprocesado import procesa_imagen, extraer_valores
 
 RUTA_TRAIN = 'training_ocr'
 TAMAÑO_TEST = 200
 
 
-# def obtener_caracteristicas(caracter):
-#     # Es un vector de una sola fila y 100 columnas que contiene el valor de gris de la imagen
-#     vector_caracteristicas = np.zeros((1, 100), dtype=np.float32)
-#     iterador = 0
-#     for fila in caracter:
-#         for valor_gris in fila:
-#             vector_caracteristicas[0][iterador] = valor_gris
-#             iterador += 1
-
-#     return vector_caracteristicas
-
-
 def procesa_ocr_training(caracteres_ocr, etiquetas):
+    kernel = np.ones((2, 2), np.uint8)
+
     '''Preprocesar imágenes y obtener vector de características'''
     mat_caracteristicas = np.zeros((len(caracteres_ocr), 100), dtype=np.uint32)  # matriz de caracteristicas
     vec_etiquetas = np.zeros(len(etiquetas), dtype=np.uint32)
@@ -35,18 +21,17 @@ def procesa_ocr_training(caracteres_ocr, etiquetas):
         vec_etiquetas[ix] = etiquetas[ix]
 
     for num_caracter, caracter in enumerate(caracteres_ocr):
-        caracter_gray = cv2.bitwise_not(caracter)
-        thresh = cv2.threshold(caracter_gray, 0, 255,
-                               cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
-        # caracter_preprocesado = procesa_imagen(caracter)
-        # caracter_preprocesado = extraer_valores(caracter)
+        caracter_blur = cv2.medianBlur(caracter, 5)
+        thresh = cv2.adaptiveThreshold(caracter_blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)
 
-        ctrs, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        img_erode = cv2.dilate(thresh, kernel, iterations=1)
+
+        ctrs, _ = cv2.findContours(img_erode, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         sorted_ctrs = sorted(ctrs, key=lambda x: cv2.contourArea(x))
 
         if len(sorted_ctrs) != 0:
             x, y, w, h = cv2.boundingRect(sorted_ctrs[0])
-            caracter_resized = cv2.resize(caracter[y:y + h+2, x:x + w +2], (10, 10), interpolation=cv2.INTER_LINEAR)
+            caracter_resized = cv2.resize(caracter[y:y + h + 2, x:x + w + 2], (10, 10), interpolation=cv2.INTER_LINEAR)
 
             vc = caracter_resized.flatten()
 
@@ -57,38 +42,6 @@ def procesa_ocr_training(caracteres_ocr, etiquetas):
 
             mat_caracteristicas[num_caracter, :] = vc
 
-    print('FIN pero sin fliparse demasiado tampoco')
-
     return mat_caracteristicas, vec_etiquetas
 
 
-# def reducir_dimensionalidad(mat_c, vec_e):
-#     crf = LinearDiscriminantAnalysis()  # se crea el objeto de entrenador LDA
-#     crf.fit(mat_c, vec_e)  # encontrar la matriz de proyeccion
-
-#     cr = np.ndarray.astype(crf.transform(mat_c), dtype=np.float32)  # matriz de caracteristicas reducidas
-
-#     return cr  # se retorna tanto la matriz de proyeccion como la matriz CR
-
-def clasificador(caracteristicas_test):
-    # leer carpeta de imagenes -> imagenes, etiquetas
-    imagenes_train, etiquetas_train = carga_imagenes_carpeta(RUTA_TRAIN, extrae_etiquetas=True)
-
-    # random_ix = np.random.choice(len(imagenes), len(imagenes))
-    # imagenes_train, etiquetas_train = imagenes[random_ix[:-TAMAÑO_TEST]], etiquetas[random_ix[:-TAMAÑO_TEST]]
-    # imagenes_test, etiquetas_test = imagenes[random_ix[TAMAÑO_TEST:]], etiquetas[random_ix[TAMAÑO_TEST:]]
-
-    # obtener caracteristicas
-    caracteristicas_train, clases_train = procesa_ocr_training(imagenes_train, etiquetas_train)
-    # caracteristicas_test, clases_test = procesa_ocr_training(imagenes_test, etiquetas_test)
-    # entrenar un lda -> Lda
-    crf = LinearDiscriminantAnalysis()  # se crea el objeto de entrenador LDA
-    cr7_train = crf.fit_transform(caracteristicas_train, clases_train).astype(np.float32)
-    cr7_test = crf.transform(caracteristicas_test)
-    # predicciones_test = crf.predict(caracteristicas_test)
-
-    knn_clasif = KNeighborsClassifier(n_neighbors=1)  # se crea el clasificador
-    knn_clasif.fit(cr7_train, clases_train)
-    predicciones_test = knn_clasif.predict(cr7_test)
-
-    # print(np.mean(clases_test == predicciones_test))

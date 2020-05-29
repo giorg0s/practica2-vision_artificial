@@ -4,57 +4,46 @@ from builtins import print
 
 import cv2
 import numpy as np
+import math
+
+kernel = np.ones((5, 5), np.uint8)
 
 
 def detecta_centro(frontales):
-    if(len(frontales)) > 0:
+    if (len(frontales)) > 0:
         x, y, w, h = frontales[0]
-        centro_x = int((x + w)/2)
-        centro_y = int((y + h)/2)
+        centro_x = int((x + w) / 2)
+        centro_y = int((y + h) / 2)
 
         return centro_x, centro_y
     else:
         print('NO SE HA ENCONTRADO EL CENTRO')
 
 
-def extraer_valores(imagen):
-    imagen = cv2.cvtColor(imagen, cv2.COLOR_GRAY2BGR)
-    V = cv2.split(cv2.cvtColor(imagen, cv2.COLOR_BGR2HSV))[2]
-    T = cv2.adaptiveThreshold(V, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 75, 10)
-    thresh = (V > T).astype("uint8") * 255
-    thresh = cv2.bitwise_not(thresh)
-
-    return thresh
-
-
 def procesa_imagen(imagen):
-    imagen_gray = cv2.bilateralFilter(imagen, 11, 17, 17)
-    th2 = cv2.adaptiveThreshold(imagen_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 75, 10)
+    imagen_blur = cv2.medianBlur(imagen, 5)
+    th2 = cv2.adaptiveThreshold(imagen_blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                cv2.THRESH_BINARY_INV, 11, 2)
 
-    kernel3 = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-    thre_mor = cv2.morphologyEx(th2, cv2.MORPH_DILATE, kernel3)
-
-    return thre_mor
+    return th2
 
 
-def get_bounding(ctrs, hierarchy,  imagen):
+def get_bounding(ctrs, imagen):
     char_list = []
     digitos = []
     sorted_ctrs = sorted(ctrs, key=lambda ctr: cv2.boundingRect(ctr)[0])
 
-    ratio = imagen.shape[1]/imagen.shape[0]
-
     for i, ctr in enumerate(sorted_ctrs):
         # Get bounding box
         x, y, w, h = cv2.boundingRect(ctr)
-        ratio_contorno = h/float(w)
-        if ratio_contorno > 1 and h > 10 and w >= 6:
+
+        largo_matricula = imagen.shape[0]
+        ancho_matricula = imagen.shape[1]
+
+        if math.floor(largo_matricula*0.40) < h and math.ceil(ancho_matricula * 0.02) < w < math.ceil(ancho_matricula * 0.18):
             char_list.append((x, y, w, h))
             char_list.sort()
-        # if (w < imagen.shape[1] * 0.17) and (w > imagen.shape[1] * 0.02) and (h < imagen.shape[0] * 0.95) and (
-        #         h > imagen.shape[0] * 0.4):
-        #     char_list.append((x, y, w, h))
-        #     char_list.sort()
+
     for rect in char_list:
         x, y, w, h = rect
         digitos.append((x, y, w, h))
